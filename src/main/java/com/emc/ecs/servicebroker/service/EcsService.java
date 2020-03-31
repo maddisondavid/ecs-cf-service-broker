@@ -7,6 +7,7 @@ import com.emc.ecs.servicebroker.model.PlanProxy;
 import com.emc.ecs.servicebroker.model.ServiceDefinitionProxy;
 import com.emc.ecs.management.sdk.*;
 import com.emc.ecs.management.sdk.model.*;
+import com.emc.ecs.utils.BucketWipe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import org.springframework.cloud.servicebroker.exception.ServiceInstanceExistsEx
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.net.URISyntaxException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -41,6 +43,9 @@ public class EcsService {
     @Autowired
     private CatalogConfig catalog;
 
+    @Autowired
+    private BucketWipe bucketWipe;
+
     private String replicationGroupID;
     private String objectEndpoint;
 
@@ -58,9 +63,16 @@ public class EcsService {
             lookupObjectEndpoints();
             lookupReplicationGroupID();
             prepareRepository();
+            bucketWipe.initialize();
         } catch (EcsManagementClientException e) {
             throw new ServiceBrokerException(e);
+        } catch (URISyntaxException e) {
+            throw new ServiceBrokerException(e);
         }
+    }
+
+    void wipeBucket(String id) {
+        bucketWipe.deleteAllObjects(prefix(id));
     }
 
     void deleteBucket(String id) {
@@ -184,6 +196,10 @@ public class EcsService {
 
     void deleteUser(String id) throws EcsManagementClientException {
         ObjectUserAction.delete(connection, prefix(id));
+    }
+
+    void addBrokerUserToBucket(String id) {
+        addUserToBucket(id, broker.getRepositoryUser());
     }
 
     void addUserToBucket(String id, String username) {

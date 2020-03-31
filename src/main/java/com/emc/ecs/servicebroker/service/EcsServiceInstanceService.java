@@ -99,6 +99,7 @@ public class EcsServiceInstanceService implements ServiceInstanceService {
                     .async(false)
                     .build());
         } catch (Exception e) {
+            LOG.error("Error deleting service instance "+serviceInstanceId, e);
             throw new ServiceBrokerException(e);
         }
     }
