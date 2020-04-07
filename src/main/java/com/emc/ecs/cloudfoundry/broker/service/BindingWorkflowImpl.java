@@ -12,6 +12,7 @@ import org.springframework.cloud.servicebroker.model.DeleteServiceInstanceBindin
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 abstract public class BindingWorkflowImpl implements BindingWorkflow {
     ServiceInstanceRepository instanceRepository;
@@ -20,6 +21,7 @@ abstract public class BindingWorkflowImpl implements BindingWorkflow {
     protected PlanProxy plan;
     String instanceId;
     String bindingId;
+    String instanceName = "";
     CreateServiceInstanceBindingRequest createRequest;
 
     BindingWorkflowImpl(ServiceInstanceRepository instanceRepo, EcsService ecs) {
@@ -30,6 +32,7 @@ abstract public class BindingWorkflowImpl implements BindingWorkflow {
     public BindingWorkflow withCreateRequest(CreateServiceInstanceBindingRequest request) {
         this.instanceId = request.getServiceInstanceId();
         this.bindingId = request.getBindingId();
+        this.instanceName = ecs.getInstanceName(request.getParameters());
         this.createRequest = request;
         return(this);
     }
@@ -41,7 +44,7 @@ abstract public class BindingWorkflowImpl implements BindingWorkflow {
     }
 
     String getUserInfo(String userSecret) {
-        return bindingId + ":" + userSecret;
+        return ecs.prefix(bindingId, instanceName) + ":" + userSecret;
     }
 
     public ServiceInstanceBinding getBinding(Map<String, Object> credentials) {
@@ -60,7 +63,7 @@ abstract public class BindingWorkflowImpl implements BindingWorkflow {
             throws IOException, EcsManagementClientException {
         Map<String, Object> credentials = new HashMap<>();
 
-        credentials.put("accessKey", ecs.prefix(bindingId));
+        credentials.put("accessKey", ecs.prefix(bindingId, instanceName));
         credentials.put("secretKey", secretKey);
 
         return credentials;

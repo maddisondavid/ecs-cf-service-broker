@@ -28,10 +28,12 @@ public class NamespaceInstanceWorkflow extends InstanceWorkflowImpl {
     public void delete(String id) {
         try {
             ServiceInstance instance = instanceRepository.find(id);
+            instanceName = ecs.getInstanceName(instance.getServiceSettings());
+
             if (instance.getReferences().size() > 1) {
                 removeInstanceFromReferences(instance, id);
             } else {
-                ecs.deleteNamespace(id);
+                ecs.deleteNamespace(id, instanceName);
             }
         } catch (EcsManagementClientException | JAXBException | IOException e) {
             throw new ServiceBrokerException(e);

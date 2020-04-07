@@ -6,11 +6,13 @@ import org.springframework.cloud.servicebroker.model.CreateServiceInstanceReques
 import org.springframework.cloud.servicebroker.model.DeleteServiceInstanceRequest;
 
 import java.util.Map;
+import java.util.Optional;
 
 abstract public class InstanceWorkflowImpl implements InstanceWorkflow {
     protected final EcsService ecs;
     final ServiceInstanceRepository instanceRepository;
     String instanceId;
+    String instanceName = "";
     CreateServiceInstanceRequest createRequest;
 
     InstanceWorkflowImpl(ServiceInstanceRepository instanceRepo, EcsService ecs) {
@@ -21,6 +23,7 @@ abstract public class InstanceWorkflowImpl implements InstanceWorkflow {
     public InstanceWorkflow withCreateRequest(CreateServiceInstanceRequest request) {
         this.instanceId = request.getServiceInstanceId();
         this.createRequest = request;
+        this.instanceName = ecs.getInstanceName(request.getParameters());
         return(this);
     }
 

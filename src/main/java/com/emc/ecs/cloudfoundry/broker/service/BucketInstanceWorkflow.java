@@ -25,10 +25,12 @@ public class BucketInstanceWorkflow extends InstanceWorkflowImpl {
     public void delete(String id) {
         try {
             ServiceInstance instance = instanceRepository.find(id);
+            instanceName = ecs.getInstanceName(instance.getServiceSettings());
+
             if (instance.getReferences().size() > 1) {
                 removeInstanceFromReferences(instance, id);
             } else {
-                ecs.deleteBucket(id);
+                ecs.deleteBucket(id, instanceName);
             }
         } catch (IOException e) {
             throw new ServiceBrokerException(e);
@@ -50,9 +52,9 @@ public class BucketInstanceWorkflow extends InstanceWorkflowImpl {
     }
 
     @Override
-    public ServiceInstance create(String bucketName, ServiceDefinitionProxy service, PlanProxy plan,
+    public ServiceInstance create(String bucketId, ServiceDefinitionProxy service, PlanProxy plan,
                                   Map<String, Object> parameters) {
-        Map<String, Object> serviceSettings = ecs.createBucket(bucketName, service, plan, parameters);
+        Map<String, Object> serviceSettings = ecs.createBucket(bucketId, service, plan, parameters, instanceName);
 
         return getServiceInstance(serviceSettings);
     }

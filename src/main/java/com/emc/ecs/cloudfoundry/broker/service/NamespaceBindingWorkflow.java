@@ -21,7 +21,7 @@ public class NamespaceBindingWorkflow extends BindingWorkflowImpl {
     }
 
     public void checkIfUserExists() throws EcsManagementClientException, IOException {
-        if (ecs.userExists(bindingId))
+        if (ecs.userExists(bindingId, instanceName))
             throw new ServiceInstanceBindingExistsException(instanceId, bindingId);
     }
 
@@ -35,12 +35,14 @@ public class NamespaceBindingWorkflow extends BindingWorkflowImpl {
             instance.setName(instance.getServiceInstanceId());
         String namespaceName = instance.getName();
 
-        return ecs.createUser(bindingId, namespaceName).getSecretKey();
+        return ecs.createUser(bindingId, namespaceName, instanceName).getSecretKey();
     }
 
     @Override
     public void removeBinding(ServiceInstanceBinding binding) throws EcsManagementClientException {
-        ecs.deleteUser(bindingId);
+        instanceName = ecs.getInstanceName(binding.getParameters());
+
+        ecs.deleteUser(bindingId, instanceName);
     }
 
     @Override
@@ -57,7 +59,7 @@ public class NamespaceBindingWorkflow extends BindingWorkflowImpl {
         Map<String, Object> credentials = super.getCredentials(secretKey);
 
         // Get custom endpoint for namespace
-        String endpoint = ecs.getNamespaceURL(ecs.prefix(namespaceName), service, plan,
+        String endpoint = ecs.getNamespaceURL(ecs.prefix(namespaceName, instanceName), service, plan,
                 createRequest.getParameters());
         credentials.put("endpoint", endpoint);
 
@@ -76,7 +78,7 @@ public class NamespaceBindingWorkflow extends BindingWorkflowImpl {
     private String getS3Url(String endpoint, String secretKey) throws MalformedURLException {
         URL baseUrl = new URL(endpoint);
         String userInfo = getUserInfo(secretKey);
-        return baseUrl.getProtocol() + "://" + ecs.prefix(userInfo) + "@" +
+        return baseUrl.getProtocol() + "://" + userInfo + "@" +
                 baseUrl.getHost() + ":" + baseUrl.getPort();
     }
 }

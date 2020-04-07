@@ -31,6 +31,11 @@ public class BucketInstanceWorkflowTest {
         Describe("BucketInstanceWorkflow", () -> {
             BeforeEach(() -> {
                 ecs = mock(EcsService.class);
+
+                when(ecs.getInstanceName(any())).thenReturn(INSTANCE_NAME);
+                when(ecs.prefix(SERVICE_INSTANCE_ID, INSTANCE_NAME)).thenReturn(PREFIX + INSTANCE_NAME + "-" + SERVICE_INSTANCE_ID);
+                when(ecs.prefix(BINDING_ID, INSTANCE_NAME)).thenReturn(PREFIX + INSTANCE_NAME + "-" + BINDING_ID);
+
                 instanceRepo = mock(ServiceInstanceRepository.class);
                 workflow = new BucketInstanceWorkflow(instanceRepo, ecs);
             });
@@ -72,7 +77,7 @@ public class BucketInstanceWorkflowTest {
                         It("should not delete the bucket" ,() -> {
                             workflow.delete(BUCKET_NAME);
                             verify(ecs, times(0))
-                                    .deleteBucket(BUCKET_NAME);
+                                    .deleteBucket(BUCKET_NAME, INSTANCE_NAME);
                         });
 
                         It("should update each references", () -> {
@@ -93,20 +98,20 @@ public class BucketInstanceWorkflowTest {
                         bucketInstance.setReferences(refs);
                         when(instanceRepo.find(BUCKET_NAME))
                                 .thenReturn(bucketInstance);
-                        doNothing().when(ecs).deleteBucket(BUCKET_NAME);
+                        doNothing().when(ecs).deleteBucket(BUCKET_NAME, INSTANCE_NAME);
                     });
 
                     It("should delete the bucket", () -> {
                         workflow.delete(BUCKET_NAME);
                         verify(ecs, times(1))
-                                .deleteBucket(BUCKET_NAME);
+                                .deleteBucket(BUCKET_NAME, INSTANCE_NAME);
                     });
                 });
             });
 
             Context("#create", () -> {
                 BeforeEach(() -> {
-                    when(ecs.createBucket(BUCKET_NAME, serviceProxy, planProxy, parameters))
+                    when(ecs.createBucket(BUCKET_NAME, serviceProxy, planProxy, parameters, INSTANCE_NAME))
                             .thenReturn(new HashMap<>());
                     workflow.withCreateRequest(bucketCreateRequestFixture(parameters));
                 });
@@ -114,7 +119,7 @@ public class BucketInstanceWorkflowTest {
                 It("should create the bucket", () -> {
                     workflow.create(BUCKET_NAME, serviceProxy, planProxy, parameters);
                     verify(ecs, times(1))
-                            .createBucket(BUCKET_NAME, serviceProxy, planProxy, parameters);
+                            .createBucket(BUCKET_NAME, serviceProxy, planProxy, parameters, INSTANCE_NAME);
                 });
 
                 It("should return the service instance", () -> {

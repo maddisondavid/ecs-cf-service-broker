@@ -32,21 +32,24 @@ public class BucketBindingWorkflow extends BindingWorkflowImpl {
     }
 
     public void checkIfUserExists() throws EcsManagementClientException, IOException {
-        if (ecs.userExists(bindingId))
+        if (ecs.userExists(bindingId, instanceName))
             throw new ServiceInstanceBindingExistsException(instanceId, bindingId);
     }
 
     @Override
     public String createBindingUser() throws EcsManagementClientException, IOException, JAXBException {
-        UserSecretKey userSecretKey = ecs.createUser(bindingId);
-        Map<String, Object> parameters = createRequest.getParameters();
         ServiceInstance instance = instanceRepository.find(instanceId);
-        if (instance == null)
+        if (instance == null) {
             throw new ServiceInstanceDoesNotExistException(instanceId);
+        }
+
+        Map<String, Object> parameters = createRequest.getParameters();
+        instanceName = ecs.getInstanceName(instance.getServiceSettings());
+        UserSecretKey userSecretKey = ecs.createUser(bindingId, instanceName);
 
         if (instance.getName() == null)
             instance.setName(instance.getServiceInstanceId());
-        String bucketName = instance.getName();
+        String bucketId = instance.getName();
 
         String export = "";
         List<String> permissions = null;
@@ -54,14 +57,14 @@ public class BucketBindingWorkflow extends BindingWorkflowImpl {
             permissions = (List<String>) parameters.get("permissions");
             export = (String) parameters.getOrDefault("export", null);
         }
-        
+
         if (permissions == null) {
-            ecs.addUserToBucket(bucketName, bindingId);
+            ecs.addUserToBucket(bucketId, bindingId, instanceName);
         } else {
-            ecs.addUserToBucket(bucketName, bindingId, permissions);
+            ecs.addUserToBucket(bucketId, bindingId, permissions, instanceName);
         }
 
-        if (ecs.getBucketFileEnabled(bucketName)) {
+        if (ecs.getBucketFileEnabled(bucketId, instanceName)) {
             volumeMounts = createVolumeExport(export,
                     new URL(ecs.getObjectEndpoint()), parameters);
         }
@@ -76,6 +79,8 @@ public class BucketBindingWorkflow extends BindingWorkflowImpl {
         if (instance == null)
             throw new ServiceInstanceDoesNotExistException(instanceId);
 
+        instanceName = ecs.getInstanceName(instance.getServiceSettings());
+
         if (instance.getName() == null)
             instance.setName(instance.getServiceInstanceId());
         String bucketName = instance.getName();
@@ -89,14 +94,14 @@ public class BucketBindingWorkflow extends BindingWorkflowImpl {
             LOG.error("Deleting user map of instance Id and Binding Id " +
                     bucketName + " " + bindingId);
             try {
-                ecs.deleteUserMap(bindingId, unixId);
+                ecs.deleteUserMap(bindingId, unixId, instanceName);
             } catch (EcsManagementClientException e) {
                 LOG.error("Error deleting user map: " + e.getMessage());
             }
         }
 
-        ecs.removeUserFromBucket(bucketName, bindingId);
-        ecs.deleteUser(bindingId);
+        ecs.removeUserFromBucket(bucketName, bindingId, instanceName);
+        ecs.deleteUser(bindingId, instanceName);
     }
 
     @Override
@@ -129,7 +134,7 @@ public class BucketBindingWorkflow extends BindingWorkflowImpl {
         }
 
         // Add bucket name from repository
-        credentials.put("bucket", ecs.prefix(bucketName));
+        credentials.put("bucket", ecs.prefix(bucketName, instanceName));
 
         return credentials;
     }
@@ -158,7 +163,7 @@ public class BucketBindingWorkflow extends BindingWorkflowImpl {
 
     private String getS3Url(URL baseUrl, String secretKey, Map<String, Object> parameters) {
         String userInfo = getUserInfo(secretKey);
-        String s3Url = baseUrl.getProtocol() + "://" + ecs.prefix(userInfo) + "@";
+        String s3Url = baseUrl.getProtocol() + "://" + userInfo + "@";
 
         String portString = "";
         if (baseUrl.getPort() != -1)
@@ -167,9 +172,9 @@ public class BucketBindingWorkflow extends BindingWorkflowImpl {
         if (parameters != null && parameters.containsKey("path-style-access") &&
                 ! (Boolean) parameters.get("path-style-access"))
         {
-            s3Url = s3Url + ecs.prefix(instanceId) + "." + baseUrl.getHost() + portString;
+            s3Url = s3Url + ecs.prefix(instanceId, instanceName) + "." + baseUrl.getHost() + portString;
         } else {
-            s3Url = s3Url + baseUrl.getHost() + portString + "/" + ecs.prefix(instanceId);
+            s3Url = s3Url + baseUrl.getHost() + portString + "/" + ecs.prefix(instanceId, instanceName);
         }
         return s3Url;
     }
@@ -178,7 +183,7 @@ public class BucketBindingWorkflow extends BindingWorkflowImpl {
         int unixUid = (int) (2000 + System.currentTimeMillis() % 8000);
         while (true) {
             try {
-                ecs.createUserMap(bindingId, unixUid);
+                ecs.createUserMap(bindingId, unixUid, instanceName);
                 break;
             } catch (EcsManagementClientException e) {
                 if (e.getMessage().contains("Bad request body (1013)")) {
@@ -201,7 +206,7 @@ public class BucketBindingWorkflow extends BindingWorkflowImpl {
 
         LOG.info("Adding export:  " + export + " to bucket: " + instanceId);
         String volumeGUID = UUID.randomUUID().toString();
-        String absoluteExportPath = ecs.addExportToBucket(instanceId, export);
+        String absoluteExportPath = ecs.addExportToBucket(instanceId, export, instanceName);
         LOG.info("export added.");
 
         Map<String, Object> opts = new HashMap<>();
@@ -228,6 +233,6 @@ public class BucketBindingWorkflow extends BindingWorkflowImpl {
                 }
             }
         }
-        return DEFAULT_MOUNT + File.separator + bindingId;
+        return DEFAULT_MOUNT + "/" + bindingId;
     }
 }

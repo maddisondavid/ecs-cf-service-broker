@@ -48,6 +48,7 @@ public class EcsServiceInstanceServiceTest {
                     settings = resolveSettings(serviceDef, plan, params);
                     when(ecs.lookupServiceDefinition(BUCKET_SERVICE_ID))
                             .thenReturn(serviceDef);
+                    when(ecs.getInstanceName(any())).thenReturn(INSTANCE_NAME);
                 });
 
                 Context("#createServiceInstance", () -> {
@@ -57,14 +58,14 @@ public class EcsServiceInstanceServiceTest {
 
                         BeforeEach(() -> {
                             createReq = bucketCreateRequestFixture(params);
-                            when(ecs.createBucket(BUCKET_NAME, serviceDef, plan, params))
+                            when(ecs.createBucket(BUCKET_NAME, serviceDef, plan, params, INSTANCE_NAME))
                                     .thenReturn(settings);
                             instSvc.createServiceInstance(createReq);
                         });
 
                         It("should create the bucket", () ->
                                 verify(ecs, times(1))
-                                        .createBucket(BUCKET_NAME, serviceDef, plan, params));
+                                        .createBucket(BUCKET_NAME, serviceDef, plan, params, INSTANCE_NAME));
 
                         It("should save the service instance to the repo", () -> {
                             ArgumentCaptor<ServiceInstance> instCap =
@@ -122,7 +123,7 @@ public class EcsServiceInstanceServiceTest {
                             });
 
                             It("should not create a bucket", () -> verify(ecs, times(0))
-                                    .createBucket(any(), any(), any(), any()));
+                                    .createBucket(any(), any(), any(), any(), any()));
 
                             It("should save the original & remote service instances to the repo", () -> {
                                 ArgumentCaptor<ServiceInstance> instCap =
@@ -170,7 +171,7 @@ public class EcsServiceInstanceServiceTest {
 
                         It("should delete the bucket", () ->
                                 verify(ecs, times(1))
-                                        .deleteBucket(BUCKET_NAME));
+                                        .deleteBucket(BUCKET_NAME, INSTANCE_NAME));
 
                         It("should delete the instance from the repository", () ->
                                 verify(repo, times(1))
@@ -191,7 +192,7 @@ public class EcsServiceInstanceServiceTest {
 
                         It("should not delete the bucket", () ->
                                 verify(ecs, times(0))
-                                        .deleteBucket(any()));
+                                        .deleteBucket(any(), any()));
 
                         It("should save an update of the remote instance in the repo", () -> {
                             ArgumentCaptor<ServiceInstance> instCap = ArgumentCaptor.forClass(ServiceInstance.class);
@@ -311,6 +312,7 @@ public class EcsServiceInstanceServiceTest {
                     settings = resolveSettings(serviceDef, plan, params);
                     when(ecs.lookupServiceDefinition(NAMESPACE_SERVICE_ID))
                             .thenReturn(serviceDef);
+                    when(ecs.getInstanceName(any())).thenReturn(INSTANCE_NAME);
                 });
 
                 Context("#createServiceInstance", () -> {
@@ -462,7 +464,7 @@ public class EcsServiceInstanceServiceTest {
 
                         It("should delete the namespace", () ->
                                 verify(ecs, times(1))
-                                        .deleteNamespace(NAMESPACE));
+                                        .deleteNamespace(NAMESPACE,  INSTANCE_NAME));
                     });
 
                     Context(WITH_REMOTE_CONNECTION, () -> {
@@ -479,7 +481,7 @@ public class EcsServiceInstanceServiceTest {
 
                         It("should not delete the namespace", () ->
                                 verify(ecs, times(0))
-                                        .deleteNamespace(any()));
+                                        .deleteNamespace(any(), any()));
 
                         It("should save an update of the remote instance in the repo", () -> {
                             ArgumentCaptor<ServiceInstance> instCap =
