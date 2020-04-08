@@ -99,28 +99,51 @@ public class BucketInstanceWorkflowTest {
                     It("should delete the bucket", () -> {
                         workflow.delete(BUCKET_NAME);
                         verify(ecs, times(1))
-                                .deleteBucket(BUCKET_NAME);
+                                .deleteBucket(SERVICE_INSTANCE_ID);
                     });
                 });
             });
 
             Context("#create", () -> {
                 BeforeEach(() -> {
-                    when(ecs.createBucket(BUCKET_NAME, serviceProxy, planProxy, parameters))
+                    when(ecs.createBucket(SERVICE_INSTANCE_ID, BUCKET_NAME, serviceProxy, planProxy, parameters))
                             .thenReturn(new HashMap<>());
                     workflow.withCreateRequest(bucketCreateRequestFixture(parameters));
                 });
 
                 It("should create the bucket", () -> {
-                    workflow.create(BUCKET_NAME, serviceProxy, planProxy, parameters);
+                    workflow.create(SERVICE_INSTANCE_ID, serviceProxy, planProxy, parameters);
                     verify(ecs, times(1))
-                            .createBucket(BUCKET_NAME, serviceProxy, planProxy, parameters);
+                            .createBucket(SERVICE_INSTANCE_ID, SERVICE_INSTANCE_ID, serviceProxy, planProxy, parameters);
                 });
 
                 It("should return the service instance", () -> {
                     ServiceInstance instance = workflow.create(BUCKET_NAME, serviceProxy, planProxy, parameters);
-                    assertEquals(BUCKET_NAME, instance.getName());
-                    assertEquals(BUCKET_NAME, instance.getServiceInstanceId());
+                    assertEquals(SERVICE_INSTANCE_ID, instance.getName());
+                    assertEquals(SERVICE_INSTANCE_ID, instance.getServiceInstanceId());
+                });
+            });
+
+            Context("#create-with-name", () -> {
+                BeforeEach(() -> {
+                    Map namedParams = Collections.singletonMap("name", BUCKET_NAME);
+
+                    when(ecs.createBucket(SERVICE_INSTANCE_ID, BUCKET_NAME, serviceProxy, planProxy, namedParams))
+                        .thenReturn(new HashMap<>());
+
+                    workflow.withCreateRequest(bucketCreateRequestFixture(Collections.singletonMap("name", BUCKET_NAME)));
+                });
+
+                It("should create the bucket", () -> {
+                    workflow.create(SERVICE_INSTANCE_ID, serviceProxy, planProxy, parameters);
+                    verify(ecs, times(1))
+                        .createBucket(SERVICE_INSTANCE_ID, BUCKET_NAME + "-" + SERVICE_INSTANCE_ID, serviceProxy, planProxy, parameters);
+                });
+
+                It("should return the service instance", () -> {
+                    ServiceInstance instance = workflow.create(BUCKET_NAME, serviceProxy, planProxy, parameters);
+                    assertEquals(BUCKET_NAME + "-" + SERVICE_INSTANCE_ID, instance.getName());
+                    assertEquals(SERVICE_INSTANCE_ID, instance.getServiceInstanceId());
                 });
             });
         });

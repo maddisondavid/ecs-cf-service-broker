@@ -63,53 +63,53 @@ public class EcsService {
         }
     }
 
-    void deleteBucket(String id) {
+    void deleteBucket(String bucketName) {
         try {
-            BucketAction.delete(connection, prefix(id), broker.getNamespace());
+            BucketAction.delete(connection, prefix(bucketName), broker.getNamespace());
         } catch (Exception e) {
             throw new ServiceBrokerException(e);
         }
     }
 
-    Boolean getBucketFileEnabled(String id) throws EcsManagementClientException {
-        ObjectBucketInfo b = BucketAction.get(connection, prefix(id), broker.getNamespace());
+    Boolean getBucketFileEnabled(String bucketName) throws EcsManagementClientException {
+        ObjectBucketInfo b = BucketAction.get(connection, prefix(bucketName), broker.getNamespace());
         return b.getFsAccessEnabled();
     }
 
-    Map<String, Object> createBucket(String id, ServiceDefinitionProxy service,
+    Map<String, Object> createBucket(String id, String bucketName, ServiceDefinitionProxy service,
                                      PlanProxy plan, Map<String, Object> parameters) {
         if (parameters == null) parameters = new HashMap<>();
 
-        logger.info(String.format("Creating bucket %s", id));
+        logger.info(String.format("Creating bucket %s", bucketName));
         try {
-            if (bucketExists(id)) {
+            if (bucketExists(bucketName)) {
                 throw new ServiceInstanceExistsException(id, service.getId());
             }
             parameters.putAll(plan.getServiceSettings());
             parameters.putAll(service.getServiceSettings());
 
-            BucketAction.create(connection, new ObjectBucketCreate(prefix(id),
+            BucketAction.create(connection, new ObjectBucketCreate(prefix(bucketName),
                     broker.getNamespace(), replicationGroupID, parameters));
 
             if (parameters.containsKey(QUOTA) && parameters.get(QUOTA) != null) {
                 logger.info("Applying quota");
                 Map<String, Integer> quota = (Map<String, Integer>) parameters.get(QUOTA);
-                BucketQuotaAction.create(connection, prefix(id), broker.getNamespace(),  quota.get(LIMIT),  quota.get(WARN));
+                BucketQuotaAction.create(connection, prefix(bucketName), broker.getNamespace(),  quota.get(LIMIT),  quota.get(WARN));
             }
 
             if (parameters.containsKey(DEFAULT_RETENTION) && parameters.get(DEFAULT_RETENTION) != null) {
                 logger.info("Applying retention policy");
                 BucketRetentionAction.update(connection, broker.getNamespace(),
-                        prefix(id), (int) parameters.get(DEFAULT_RETENTION));
+                        prefix(bucketName), (int) parameters.get(DEFAULT_RETENTION));
             }
         } catch (Exception e) {
-            logger.error(String.format("Failed to create bucket %s", id), e);
+            logger.error(String.format("Failed to create bucket %s", bucketName), e);
             throw new ServiceBrokerException(e);
         }
         return parameters;
     }
 
-    Map<String, Object> changeBucketPlan(String id, ServiceDefinitionProxy service,
+    Map<String, Object> changeBucketPlan(String bucketName, ServiceDefinitionProxy service,
                                          PlanProxy plan, Map<String, Object> parameters) {
         if (parameters == null) {
             parameters = new HashMap<>();
@@ -127,10 +127,10 @@ public class EcsService {
         try {
             if (limit == -1 && warn == -1) {
                 parameters.remove(QUOTA);
-                BucketQuotaAction.delete(connection, prefix(id),
+                BucketQuotaAction.delete(connection, prefix(bucketName),
                         broker.getNamespace());
             } else {
-                BucketQuotaAction.create(connection, prefix(id),
+                BucketQuotaAction.create(connection, prefix(bucketName),
                         broker.getNamespace(), limit, warn);
             }
         } catch (EcsManagementClientException e) {
@@ -139,8 +139,8 @@ public class EcsService {
         return parameters;
     }
 
-    private boolean bucketExists(String id) throws EcsManagementClientException {
-        return BucketAction.exists(connection, prefix(id),
+    private boolean bucketExists(String bucketName) throws EcsManagementClientException {
+        return BucketAction.exists(connection, prefix(bucketName),
                 broker.getNamespace());
     }
 
@@ -316,7 +316,7 @@ public class EcsService {
                 plan = service.findPlan(broker.getRepositoryPlanId());
             }
             Map<String, Object> parameters = new HashMap<>();
-            createBucket(bucketName, service, plan, parameters);
+            createBucket("repository", bucketName, service, plan, parameters);
         }
 
         if (!userExists(userName)) {
@@ -385,12 +385,12 @@ public class EcsService {
         NamespaceAction.delete(connection, prefix(id));
     }
 
-    Map<String, Object> changeNamespacePlan(String id, ServiceDefinitionProxy service,
+    Map<String, Object> changeNamespacePlan(String namespace, ServiceDefinitionProxy service,
                                             PlanProxy plan, Map<String, Object> parameters)
             throws EcsManagementClientException {
         parameters.putAll(plan.getServiceSettings());
         parameters.putAll(service.getServiceSettings());
-        NamespaceAction.update(connection, prefix(id),
+        NamespaceAction.update(connection, prefix(namespace),
                 new NamespaceUpdate(parameters));
 
         if (parameters.containsKey(RETENTION)) {
@@ -398,19 +398,19 @@ public class EcsService {
             Map<String, Integer> retention = (Map<String, Integer>) parameters
                     .get(RETENTION);
             for (Map.Entry<String, Integer> entry : retention.entrySet()) {
-                if (NamespaceRetentionAction.exists(connection, id,
+                if (NamespaceRetentionAction.exists(connection, prefix(namespace),
                         entry.getKey())) {
                     if (-1 == entry.getValue()) {
-                        NamespaceRetentionAction.delete(connection, prefix(id),
+                        NamespaceRetentionAction.delete(connection, prefix(namespace),
                                 entry.getKey());
                         parameters.remove(RETENTION);
                     } else {
-                        NamespaceRetentionAction.update(connection, prefix(id),
+                        NamespaceRetentionAction.update(connection, prefix(namespace),
                                 entry.getKey(),
                                 new RetentionClassUpdate(entry.getValue()));
                     }
                 } else {
-                    NamespaceRetentionAction.create(connection, prefix(id),
+                    NamespaceRetentionAction.create(connection, prefix(namespace),
                             new RetentionClassCreate(entry.getKey(),
                                     entry.getValue()));
                 }

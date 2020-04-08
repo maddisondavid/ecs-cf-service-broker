@@ -117,7 +117,7 @@ public class EcsServiceInstanceService implements ServiceInstanceService {
             InstanceWorkflow workflow = getWorkflow(service);
             LOG.info("changing instance plan");
             Map<String, Object> serviceSettings =
-                    workflow.changePlan(serviceInstanceId, service, service.findPlan(planId), request.getParameters());
+                    workflow.changePlan(instance.getName(), service, service.findPlan(planId), request.getParameters());
 
             LOG.info("updating service in repo");
             // This shouldn't be needed. The object will be re-versioned

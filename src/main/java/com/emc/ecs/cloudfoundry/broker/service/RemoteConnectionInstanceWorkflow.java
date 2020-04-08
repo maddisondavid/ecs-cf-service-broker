@@ -22,7 +22,7 @@ public class RemoteConnectionInstanceWorkflow extends InstanceWorkflowImpl {
     }
 
     @Override
-    public Map<String, Object> changePlan(String id, ServiceDefinitionProxy service, PlanProxy plan, Map<String, Object> parameters) throws EcsManagementClientException, ServiceBrokerException {
+    public Map<String, Object> changePlan(String instanceName, ServiceDefinitionProxy service, PlanProxy plan, Map<String, Object> parameters) throws EcsManagementClientException, ServiceBrokerException {
         throw new ServiceBrokerException("remote_connection parameter invalid for plan upgrade");
     }
 
@@ -36,6 +36,7 @@ public class RemoteConnectionInstanceWorkflow extends InstanceWorkflowImpl {
                                   Map<String, Object> parameters)
             throws EcsManagementClientException, EcsManagementResourceNotFoundException, IOException, JAXBException {
         Map<String, String> remoteConnection = getRemoteConnection(parameters);
+
         ServiceInstance remoteInstance = getRemoteInstance(remoteConnection);
         validateCredentials(remoteInstance, remoteConnection);
         validateSettings(remoteInstance, serviceDef, plan, parameters);

@@ -88,10 +88,16 @@ public class RemoteConnectionInstanceWorkflowTest {
 
                 });
 
+
+
+
+
+
+
                 Context("with valid remote connect credentials", () -> {
                     BeforeEach(() -> {
                         settings = resolveSettings(serviceProxy, planProxy, new HashMap<>());
-                        ServiceInstance remoteInst = new ServiceInstance(bucketCreateRequestFixture(params));
+                        ServiceInstance remoteInst = new ServiceInstance(remoteBucketCreateRequestFixture(params));
                         remoteInst.addRemoteConnectionKey(BINDING_ID, REMOTE_CONNECT_KEY);
                         remoteInst.setServiceSettings(settings);
                         when(instanceRepo.find(BUCKET_NAME))
@@ -126,13 +132,13 @@ public class RemoteConnectionInstanceWorkflowTest {
                                         .find(BUCKET_NAME));
 
                         It("should save the the remote service instance", () ->
-                                assertEquals(BUCKET_NAME,
+                                assertEquals(REMOTE_SERVICE_INSTANCE_ID,
                                         instCap.getValue().getServiceInstanceId()));
 
                         It("should save the remote references", () -> {
                             ServiceInstance remoteInst = instCap.getValue();
                             assertEquals(2, remoteInst.getReferenceCount());
-                            assert (remoteInst.getReferences().contains(BUCKET_NAME));
+                            assert (remoteInst.getReferences().contains(REMOTE_SERVICE_INSTANCE_ID));
                             assert (remoteInst.getReferences().contains(SERVICE_INSTANCE_ID));
                         });
 
@@ -146,7 +152,7 @@ public class RemoteConnectionInstanceWorkflowTest {
 
                         It("should save the local references", () -> {
                             assertEquals(2, instCap.getValue().getReferenceCount());
-                            assert (localInst.getReferences().contains(BUCKET_NAME));
+                            assert (localInst.getReferences().contains(REMOTE_SERVICE_INSTANCE_ID));
                             assert (localInst.getReferences().contains(SERVICE_INSTANCE_ID));
                         });
 

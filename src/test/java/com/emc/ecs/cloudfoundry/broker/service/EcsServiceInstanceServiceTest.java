@@ -57,21 +57,21 @@ public class EcsServiceInstanceServiceTest {
 
                         BeforeEach(() -> {
                             createReq = bucketCreateRequestFixture(params);
-                            when(ecs.createBucket(BUCKET_NAME, serviceDef, plan, params))
+                            when(ecs.createBucket(SERVICE_INSTANCE_ID, SERVICE_INSTANCE_ID, serviceDef, plan, params))
                                     .thenReturn(settings);
                             instSvc.createServiceInstance(createReq);
                         });
 
                         It("should create the bucket", () ->
                                 verify(ecs, times(1))
-                                        .createBucket(BUCKET_NAME, serviceDef, plan, params));
+                                        .createBucket(SERVICE_INSTANCE_ID, SERVICE_INSTANCE_ID, serviceDef, plan, params));
 
                         It("should save the service instance to the repo", () -> {
                             ArgumentCaptor<ServiceInstance> instCap =
                                     ArgumentCaptor.forClass(ServiceInstance.class);
                             verify(repo, times(1))
                                     .save(instCap.capture());
-                            assertEquals(BUCKET_NAME, instCap.getValue().getServiceInstanceId());
+                            assertEquals(SERVICE_INSTANCE_ID, instCap.getValue().getServiceInstanceId());
                         });
 
                         It("should save the service settings to the repo", () -> {
@@ -92,14 +92,14 @@ public class EcsServiceInstanceServiceTest {
                                     new ServiceInstance(bucketCreateRequestFixture(params));
                             repoInst.addRemoteConnectionKey(BINDING_ID, REMOTE_CONNECT_KEY);
                             repoInst.setServiceSettings(settings);
-                            when(repo.find(BUCKET_NAME))
+                            when(repo.find(SERVICE_INSTANCE_ID))
                                     .thenReturn(repoInst);
                         });
 
                         Context("without valid remote connect creds", () -> {
 
                             BeforeEach(() -> {
-                                params.put(REMOTE_CONNECTION, remoteConnect(BUCKET_NAME, "junk"));
+                                params.put(REMOTE_CONNECTION, remoteConnect(SERVICE_INSTANCE_ID, "junk"));
                                 createReq = remoteBucketCreateRequestFixture(params);
                             });
 
@@ -116,13 +116,13 @@ public class EcsServiceInstanceServiceTest {
                         Context("with valid remote connect creds", () -> {
 
                             BeforeEach(() -> {
-                                params.put(REMOTE_CONNECTION, remoteConnect(BUCKET_NAME, REMOTE_CONNECT_KEY));
+                                params.put(REMOTE_CONNECTION, remoteConnect(SERVICE_INSTANCE_ID, REMOTE_CONNECT_KEY));
                                 createReq = remoteBucketCreateRequestFixture(params);
                                 instSvc.createServiceInstance(createReq);
                             });
 
                             It("should not create a bucket", () -> verify(ecs, times(0))
-                                    .createBucket(any(), any(), any(), any()));
+                                    .createBucket(any(), any(), any(), any(), any()));
 
                             It("should save the original & remote service instances to the repo", () -> {
                                 ArgumentCaptor<ServiceInstance> instCap =
@@ -130,10 +130,10 @@ public class EcsServiceInstanceServiceTest {
                                 verify(repo, times(2))
                                         .save(instCap.capture());
                                 ServiceInstance remoteInst = instCap.getAllValues().get(0);
-                                assertEquals(BUCKET_NAME, remoteInst.getServiceInstanceId());
+                                assertEquals(SERVICE_INSTANCE_ID, remoteInst.getServiceInstanceId());
 
                                 ServiceInstance localInst = instCap.getAllValues().get(1);
-                                assertEquals(SERVICE_INSTANCE_ID, localInst.getServiceInstanceId());
+                                assertEquals(REMOTE_SERVICE_INSTANCE_ID, localInst.getServiceInstanceId());
                             });
 
                             It("should update the remote references", () -> {
@@ -163,26 +163,26 @@ public class EcsServiceInstanceServiceTest {
                         BeforeEach(() -> {
                             ServiceInstance inst =
                                     new ServiceInstance(bucketCreateRequestFixture(params));
-                            when(repo.find(BUCKET_NAME))
+                            when(repo.find(SERVICE_INSTANCE_ID))
                                     .thenReturn(inst);
                             instSvc.deleteServiceInstance(bucketDeleteRequestFixture());
                         });
 
                         It("should delete the bucket", () ->
                                 verify(ecs, times(1))
-                                        .deleteBucket(BUCKET_NAME));
+                                        .deleteBucket(SERVICE_INSTANCE_ID));
 
                         It("should delete the instance from the repository", () ->
                                 verify(repo, times(1))
-                                        .delete(BUCKET_NAME));
+                                        .delete(SERVICE_INSTANCE_ID));
                     });
 
                     Context(WITH_REMOTE_CONNECTION, () -> {
                         BeforeEach(() -> {
                             ServiceInstance inst =
                                     new ServiceInstance(bucketCreateRequestFixture(params));
-                            inst.addReference(SERVICE_INSTANCE_ID);
-                            when(repo.find(BUCKET_NAME))
+                            inst.addReference(REMOTE_SERVICE_INSTANCE_ID);
+                            when(repo.find(REMOTE_SERVICE_INSTANCE_ID))
                                     .thenReturn(inst);
                             when(repo.find(SERVICE_INSTANCE_ID))
                                     .thenReturn(inst);
@@ -197,23 +197,23 @@ public class EcsServiceInstanceServiceTest {
                             ArgumentCaptor<ServiceInstance> instCap = ArgumentCaptor.forClass(ServiceInstance.class);
                             verify(repo, times(1))
                                     .save(instCap.capture());
-                            assertEquals(BUCKET_NAME, instCap.getValue().getServiceInstanceId());
+                            assertEquals(SERVICE_INSTANCE_ID, instCap.getValue().getServiceInstanceId());
                         });
 
                         It("should still have the remote instance in the references", () -> {
                             ArgumentCaptor<ServiceInstance> instCap = ArgumentCaptor.forClass(ServiceInstance.class);
                             verify(repo, times(1))
                                     .save(instCap.capture());
-                            assert (instCap.getValue().getReferences().contains(SERVICE_INSTANCE_ID));
+                            assert (instCap.getValue().getReferences().contains(REMOTE_SERVICE_INSTANCE_ID));
                         });
 
                         It("should delete this instance from the repo", () ->
                                 verify(repo, times(1))
-                                        .delete(eq(BUCKET_NAME)));
+                                        .delete(eq(SERVICE_INSTANCE_ID)));
 
                         It("should not delete the remote instance from the repo", () ->
                                 verify(repo, times(0))
-                                        .delete(eq(SERVICE_INSTANCE_ID)));
+                                        .delete(eq(REMOTE_SERVICE_INSTANCE_ID)));
                     });
 
                 });
@@ -221,41 +221,41 @@ public class EcsServiceInstanceServiceTest {
                 Context("#updateServiceInstance", () -> {
                     Context(BASIC_SERVICE, () -> {
                         BeforeEach(() -> {
-                            when(repo.find(BUCKET_NAME))
+                            when(repo.find(SERVICE_INSTANCE_ID))
                                     .thenReturn(new ServiceInstance(bucketCreateRequestFixture(params)));
-                            when(ecs.changeBucketPlan(BUCKET_NAME, serviceDef, plan, params))
+                            when(ecs.changeBucketPlan(SERVICE_INSTANCE_ID, serviceDef, plan, params))
                                     .thenReturn(settings);
                             instSvc.updateServiceInstance(bucketUpdateRequestFixture(params));
                         });
 
                         It("should find the service instance in the repo", () ->
                                 verify(repo, times(1))
-                                        .find(BUCKET_NAME));
+                                        .find(SERVICE_INSTANCE_ID));
 
                         It("should not delete the service instance from the repo", () ->
                                 verify(repo, times(0))
-                                        .delete(BUCKET_NAME));
+                                        .delete(SERVICE_INSTANCE_ID));
 
                         It("should save the updated service instance to the repo", () -> {
                             ArgumentCaptor<ServiceInstance> instCap =
                                     ArgumentCaptor.forClass(ServiceInstance.class);
                             verify(repo, times(1))
                                     .save(instCap.capture());
-                            assertEquals(BUCKET_NAME, instCap.getValue().getServiceInstanceId());
+                            assertEquals(SERVICE_INSTANCE_ID, instCap.getValue().getServiceInstanceId());
                             assertEquals("bucket",
                                     instCap.getValue().getServiceSettings().get("service-type"));
                         });
 
                         It("should update the bucket", () ->
                                 verify(ecs, times(1))
-                                        .changeBucketPlan(BUCKET_NAME, serviceDef, plan, params));
+                                        .changeBucketPlan(SERVICE_INSTANCE_ID, serviceDef, plan, params));
                     });
 
                     Context(WITH_REMOTE_CONNECTION, () -> {
                         BeforeEach(() -> {
                             ServiceInstance inst = new ServiceInstance(bucketCreateRequestFixture(params));
                             inst.addReference(SERVICE_INSTANCE_ID);
-                            when(repo.find(BUCKET_NAME))
+                            when(repo.find(SERVICE_INSTANCE_ID))
                                     .thenReturn(inst);
                         });
 
@@ -287,7 +287,7 @@ public class EcsServiceInstanceServiceTest {
                     Context("with remote connection parameters", () -> {
                         BeforeEach(() -> {
                             ServiceInstance inst = new ServiceInstance(bucketCreateRequestFixture(params));
-                            when(repo.find(BUCKET_NAME))
+                            when(repo.find(SERVICE_INSTANCE_ID))
                                     .thenReturn(inst);
                         });
 
@@ -455,22 +455,22 @@ public class EcsServiceInstanceServiceTest {
                         BeforeEach(() -> {
                             ServiceInstance inst =
                                     new ServiceInstance(namespaceCreateRequestFixture(params));
-                            when(repo.find(NAMESPACE))
+                            when(repo.find(SERVICE_INSTANCE_ID))
                                     .thenReturn(inst);
                             instSvc.deleteServiceInstance(namespaceDeleteRequestFixture());
                         });
 
                         It("should delete the namespace", () ->
                                 verify(ecs, times(1))
-                                        .deleteNamespace(NAMESPACE));
+                                        .deleteNamespace(SERVICE_INSTANCE_ID));
                     });
 
                     Context(WITH_REMOTE_CONNECTION, () -> {
                         BeforeEach(() -> {
                             ServiceInstance inst =
                                     new ServiceInstance(namespaceCreateRequestFixture(params));
-                            inst.addReference(NAMESPACE);
-                            when(repo.find(NAMESPACE))
+                            inst.addReference(REMOTE_SERVICE_INSTANCE_ID);
+                            when(repo.find(REMOTE_SERVICE_INSTANCE_ID))
                                     .thenReturn(inst);
                             when(repo.find(SERVICE_INSTANCE_ID))
                                     .thenReturn(inst);
@@ -494,16 +494,16 @@ public class EcsServiceInstanceServiceTest {
                                     ArgumentCaptor.forClass(ServiceInstance.class);
                             verify(repo, times(1))
                                     .save(instCap.capture());
-                            assert (instCap.getValue().getReferences().contains(SERVICE_INSTANCE_ID));
+                            assert (instCap.getValue().getReferences().contains(REMOTE_SERVICE_INSTANCE_ID));
                         });
 
                         It("should delete this instance from the repo", () ->
                                 verify(repo, times(1))
-                                        .delete(NAMESPACE));
+                                        .delete(SERVICE_INSTANCE_ID));
 
                         It("should not delete the remote instance from the repo", () ->
                                 verify(repo, times(0))
-                                        .delete(SERVICE_INSTANCE_ID));
+                                        .delete(NAMESPACE));
 
                     });
                 });
@@ -511,16 +511,16 @@ public class EcsServiceInstanceServiceTest {
                 Context("#updateServiceInstance", () -> {
                     Context(BASIC_SERVICE, () -> {
                         BeforeEach(() -> {
-                            when(repo.find(NAMESPACE))
+                            when(repo.find(SERVICE_INSTANCE_ID))
                                     .thenReturn(new ServiceInstance(namespaceCreateRequestFixture(params)));
-                            when(ecs.changeNamespacePlan(NAMESPACE, serviceDef, plan, params))
+                            when(ecs.changeNamespacePlan(SERVICE_INSTANCE_ID, serviceDef, plan, params))
                                     .thenReturn(settings);
                             instSvc.updateServiceInstance(namespaceUpdateRequestFixture(params));
                         });
 
                         It("should find the service instance in the repo", () ->
                                 verify(repo, times(1))
-                                        .find(NAMESPACE));
+                                        .find(SERVICE_INSTANCE_ID));
 
                         It("should not delete the service instance from the repo", () ->
                                 verify(repo, times(0))
@@ -531,14 +531,14 @@ public class EcsServiceInstanceServiceTest {
                                     ArgumentCaptor.forClass(ServiceInstance.class);
                             verify(repo, times(1))
                                     .save(instCap.capture());
-                            assertEquals(NAMESPACE, instCap.getValue().getServiceInstanceId());
+                            assertEquals(SERVICE_INSTANCE_ID, instCap.getValue().getServiceInstanceId());
                             assertEquals("namespace",
                                     instCap.getValue().getServiceSettings().get("service-type"));
                         });
 
                         It("should update the namespace", () ->
                                 verify(ecs, times(1))
-                                        .changeNamespacePlan(NAMESPACE, serviceDef, plan, params));
+                                        .changeNamespacePlan(SERVICE_INSTANCE_ID, serviceDef, plan, params));
 
                     });
 
@@ -547,7 +547,7 @@ public class EcsServiceInstanceServiceTest {
                             ServiceInstance inst =
                                     new ServiceInstance(namespaceCreateRequestFixture(params));
                             inst.addReference(SERVICE_INSTANCE_ID);
-                            when(repo.find(NAMESPACE))
+                            when(repo.find(SERVICE_INSTANCE_ID))
                                     .thenReturn(inst);
                         });
 
@@ -564,7 +564,7 @@ public class EcsServiceInstanceServiceTest {
                     Context("with remote connection parameters", () -> {
                         BeforeEach(() -> {
                             ServiceInstance inst = new ServiceInstance(namespaceCreateRequestFixture(params));
-                            when(repo.find(NAMESPACE))
+                            when(repo.find(SERVICE_INSTANCE_ID))
                                     .thenReturn(inst);
                         });
 

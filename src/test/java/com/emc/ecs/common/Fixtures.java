@@ -66,6 +66,7 @@ public class Fixtures {
     private static final String COMPLIANCE_ENABLED = "compliance-enabled";
     private static final String DOMAIN_GROUP_ADMINS = "domain-group-admins";
     public static final String SERVICE_INSTANCE_ID = "service-instance-id";
+    public static final String REMOTE_SERVICE_INSTANCE_ID = "remote-service-instance-id";
     public static final String REMOTE_CONNECT_KEY = "95cb87f5-80d3-48b7-b860-072aeae4a918";
     public static final String EXPORT_NAME = "/export/dir";
     public static final String VOLUME_MOUNT = "/mount/dir";
@@ -185,35 +186,35 @@ public class Fixtures {
             Map<String, Object> params) {
         return new CreateServiceInstanceRequest(BUCKET_SERVICE_ID,
                 BUCKET_PLAN_ID1, ORG_ID, SPACE_ID, params)
-                .withServiceInstanceId(BUCKET_NAME);
+                .withServiceInstanceId(SERVICE_INSTANCE_ID);
     }
 
     public static CreateServiceInstanceRequest remoteBucketCreateRequestFixture(
             Map<String, Object> params) {
         return new CreateServiceInstanceRequest(BUCKET_SERVICE_ID,
                 BUCKET_PLAN_ID1, ORG_ID, SPACE_ID, params)
-                .withServiceInstanceId(SERVICE_INSTANCE_ID);
+                .withServiceInstanceId(REMOTE_SERVICE_INSTANCE_ID);
     }
 
     public static UpdateServiceInstanceRequest namespaceUpdateRequestFixture(
             Map<String, Object> params) {
         return new UpdateServiceInstanceRequest(NAMESPACE_SERVICE_ID,
-                NAMESPACE_PLAN_ID1, params).withServiceInstanceId(NAMESPACE);
+                NAMESPACE_PLAN_ID1, params).withServiceInstanceId(SERVICE_INSTANCE_ID);
     }
 
     public static UpdateServiceInstanceRequest bucketUpdateRequestFixture(
             Map<String, Object> params) {
         return new UpdateServiceInstanceRequest(BUCKET_SERVICE_ID,
-                BUCKET_PLAN_ID1, params).withServiceInstanceId(BUCKET_NAME);
+                BUCKET_PLAN_ID1, params).withServiceInstanceId(SERVICE_INSTANCE_ID);
     }
 
     public static DeleteServiceInstanceRequest namespaceDeleteRequestFixture() {
-        return new DeleteServiceInstanceRequest(NAMESPACE, NAMESPACE_SERVICE_ID,
+        return new DeleteServiceInstanceRequest(SERVICE_INSTANCE_ID, NAMESPACE_SERVICE_ID,
                 NAMESPACE_PLAN_ID1, null);
     }
 
     public static DeleteServiceInstanceRequest bucketDeleteRequestFixture() {
-        return new DeleteServiceInstanceRequest(BUCKET_NAME, BUCKET_SERVICE_ID,
+        return new DeleteServiceInstanceRequest(SERVICE_INSTANCE_ID, BUCKET_SERVICE_ID,
                 BUCKET_PLAN_ID1, null);
     }
 

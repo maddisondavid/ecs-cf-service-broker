@@ -17,8 +17,8 @@ public class BucketInstanceWorkflow extends InstanceWorkflowImpl {
     }
 
     @Override
-    public Map<String, Object> changePlan(String id, ServiceDefinitionProxy service, PlanProxy plan, Map<String, Object> parameters) {
-        return ecs.changeBucketPlan(id, service, plan, parameters);
+    public Map<String, Object> changePlan(String instanceName, ServiceDefinitionProxy service, PlanProxy plan, Map<String, Object> parameters) {
+        return ecs.changeBucketPlan(instanceName, service, plan, parameters);
     }
 
     @Override
@@ -28,7 +28,7 @@ public class BucketInstanceWorkflow extends InstanceWorkflowImpl {
             if (instance.getReferences().size() > 1) {
                 removeInstanceFromReferences(instance, id);
             } else {
-                ecs.deleteBucket(id);
+                ecs.deleteBucket(instance.getName());
             }
         } catch (IOException e) {
             throw new ServiceBrokerException(e);
@@ -50,10 +50,13 @@ public class BucketInstanceWorkflow extends InstanceWorkflowImpl {
     }
 
     @Override
-    public ServiceInstance create(String bucketName, ServiceDefinitionProxy service, PlanProxy plan,
+    public ServiceInstance create(String id, ServiceDefinitionProxy service, PlanProxy plan,
                                   Map<String, Object> parameters) {
-        Map<String, Object> serviceSettings = ecs.createBucket(bucketName, service, plan, parameters);
+        ServiceInstance instance = getServiceInstance(parameters);
+        Map<String, Object> serviceSettings = ecs.createBucket(id, instance.getName(), service, plan, parameters);
 
-        return getServiceInstance(serviceSettings);
+        instance.setServiceSettings(serviceSettings);
+
+        return instance;
     }
 }

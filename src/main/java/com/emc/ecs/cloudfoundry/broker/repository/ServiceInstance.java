@@ -13,6 +13,7 @@ import java.util.*;
 @SuppressWarnings("unused")
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE)
 public class ServiceInstance {
+    private static String NAME_PARAMETER = "name";
 
     @JsonSerialize
     @JsonProperty("service_instance_id")
@@ -74,9 +75,13 @@ public class ServiceInstance {
         serviceInstanceId = request.getServiceInstanceId();
         lastOperation = new LastOperationSerializer(
                 OperationState.IN_PROGRESS, "Provisioning", false);
-        
+
         // name is set on 1st create only, not by connecting remotely
-        name = serviceInstanceId;
+        if (request.getParameters() != null && request.getParameters().containsKey(NAME_PARAMETER)) {
+            name = request.getParameters().get(NAME_PARAMETER) + "-" + serviceInstanceId;
+        } else {
+            name = serviceInstanceId;
+        }
 
         // add a reference to itself, used to find remotely created instances
         // of the same actual service instance
