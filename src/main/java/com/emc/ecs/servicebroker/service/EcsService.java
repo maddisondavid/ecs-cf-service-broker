@@ -41,6 +41,9 @@ public class EcsService {
     @Autowired
     private CatalogConfig catalog;
 
+    @Autowired
+    private BucketWipe bucketWipe;
+
     private String replicationGroupID;
     private String objectEndpoint;
 
@@ -58,6 +61,7 @@ public class EcsService {
             lookupObjectEndpoints();
             lookupReplicationGroupID();
             prepareRepository();
+            bucketWipe.initialize();
         } catch (EcsManagementClientException e) {
             throw new ServiceBrokerException(e);
         }
